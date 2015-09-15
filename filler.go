@@ -10,7 +10,7 @@ import (
 
 func main() {
 	flag.Parse()
-	var p parameter.Parameters = parameter.NewParameterMap()
+	p := parameter.GetParameters()
 	if err := p.ProcessProviders(); err != nil {
 		log.Fatal(err)
 	}

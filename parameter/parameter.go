@@ -1,18 +1,25 @@
 package parameter
 
 import (
+	"flag"
 	"os"
 	"text/template"
 )
 
+func init() {
+	flag.BoolVar(&useList, "l", false, "Input is a list instead of a map")
+}
+
+var useList bool = false
 var ParametersMapProviders = make([]ParametersMapProvider, 0)
+var ParametersSliceProviders = make([]ParametersSliceProvider, 0)
 
 type ParametersMapProvider interface {
 	FillMap(map[string]interface{}) error
 }
 
-type SliceParametersProvider interface {
-	FillSlice([]interface{}) error
+type ParametersSliceProvider interface {
+	FillSlice(*[]interface{}) error
 }
 
 type Parameters interface {
@@ -24,8 +31,24 @@ type ParameterMap struct {
 	data map[string]interface{}
 }
 
+type ParameterSlice struct {
+	data []interface{}
+}
+
+func GetParameters() Parameters {
+	if useList == false {
+		return NewParameterMap()
+	} else {
+		return NewParameterSlice()
+	}
+}
+
 func NewParameterMap() *ParameterMap {
 	return &ParameterMap{make(map[string]interface{})}
+}
+
+func NewParameterSlice() *ParameterSlice {
+	return &ParameterSlice{make([]interface{}, 0)}
 }
 
 func (m *ParameterMap) processProvider(p ParametersMapProvider) error {
@@ -43,4 +66,21 @@ func (m *ParameterMap) ProcessProviders() error {
 
 func (m *ParameterMap) ExecuteTemplate(t *template.Template) error {
 	return t.Execute(os.Stdout, m.data)
+}
+
+func (s *ParameterSlice) processProvider(p ParametersSliceProvider) error {
+	return p.FillSlice(&s.data)
+}
+
+func (s *ParameterSlice) ProcessProviders() error {
+	for _, p := range ParametersSliceProviders {
+		if err := s.processProvider(p); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *ParameterSlice) ExecuteTemplate(t *template.Template) error {
+	return t.Execute(os.Stdout, s.data)
 }
